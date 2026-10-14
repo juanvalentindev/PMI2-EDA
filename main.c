@@ -150,8 +150,25 @@ void LocalizarRAL(RAL *ral,long dni_buscado,int *pos,int *exito,int *costo){
 
 }
 
-void AltaRAL(){
+void AltaRAL(RAL *ral, elector nuevoElector, float *costo,int *exito){
 
+    int encontrado;
+    int costoPrima = 0; //Valor descartable
+    int exitoPrima = 0;
+    int pos;
+
+    LocalizarRAL(ral,nuevoElector->dni,&pos,&costoPrima,&exitoPrima);
+
+    if(exitoPrima == 0){
+        nuevoElector.estado = 1;
+        ral->electores[pos] = nuevoElector;
+        ral->cantidad++;
+         *exito = 1;
+        return;
+    }else{
+        *exito = 0;
+        return;
+    }
 }
 
 int main()
