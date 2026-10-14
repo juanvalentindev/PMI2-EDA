@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1792007740 source:/home/juan-valentin/Documentos/Codigos/EDA/PMI2-EDA/main.c
+1792011741 source:/home/juan-valentin/Documentos/Codigos/EDA/PMI2-EDA/main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+	<ctype.h>
 

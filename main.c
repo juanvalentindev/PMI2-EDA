@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 ///CONSTANTES.
 
 #define ELECTORES_ESPERADOS 2000
@@ -62,6 +63,31 @@ int hashing(int dni, int M) {
     return (contador % M);
 }
 
+
+//Funciones de Comparación para confirmación de BAJA
+
+int CompararNombresNoCaseSensitive(const char *str1, const char *str2) {
+    while (*str1 && *str2) {
+        if (tolower((unsigned char)*str1) != tolower((unsigned char)*str2)) return 0;
+        str1++;
+        str2++;
+    }
+    return (*str1 == *str2) ? 1 : 0;
+}
+
+
+int CompararNuplas(elector e1, elector e2) {
+    if (e1.dni == e2.dni &&
+        e1.codigoPostal == e2.codigoPostal &&
+        e1.numeroMesa == e2.numeroMesa &&
+        e1.circuito == e2.circuito &&
+        CompararNombresNoCaseSensitive(e1.nombreApellido, e2.nombreApellido) == 1 &&
+        CompararNombresNoCaseSensitive(e1.domicilio, e2.domicilio) == 1) {
+        return 1;
+    }
+    return 0;
+}
+
 /*
 
  REBALSE ABIERTO LINEAL (RAL)
@@ -78,7 +104,7 @@ int hashing(int dni, int M) {
 */
 
 typedef struct{
-    elector electores[ELECTORES_ESPERADOS];
+    elector electores[M_RAL];
     int cantidad;
 }RAL;
 
@@ -114,7 +140,7 @@ void LocalizarRAL(RAL *ral,long dni_buscado,int *pos,int *exito,int *costo){
 
         switch(estado){
             case 0:{
-                if(primera_libre != -1){
+                if(primeraLibre != -1){
                     *pos = primeraLibre;
                 }else{
                     *pos = actual;
@@ -145,7 +171,7 @@ void LocalizarRAL(RAL *ral,long dni_buscado,int *pos,int *exito,int *costo){
 
     }
 
-    *pos = (primera_libre != -1) ? primera_libre : actual; //Me corrigio esta linea gemini, no se porque ponerla.
+    *pos = (primeraLibre != -1) ? primeraLibre : actual; //Me corrigio esta linea gemini, no se porque ponerla.
 
 
 }
@@ -157,18 +183,49 @@ void AltaRAL(RAL *ral, elector nuevoElector, float *costo,int *exito){
     int exitoPrima = 0;
     int pos;
 
-    LocalizarRAL(ral,nuevoElector->dni,&pos,&costoPrima,&exitoPrima);
+
+    LocalizarRAL(ral,nuevoElector.dni,&pos,&costoPrima,&exitoPrima);
 
     if(exitoPrima == 0){
         nuevoElector.estado = 1;
         ral->electores[pos] = nuevoElector;
         ral->cantidad++;
+        *costo = (float)costoPrima;
          *exito = 1;
         return;
     }else{
         *exito = 0;
         return;
     }
+}
+
+void BajaRal(RAL *ral,elector nuplaBaja,int *exito,float *costo){
+
+    int pos,costoPrima,exitoPrima;
+    LocalizarRAL(ral,nuplaBaja.dni,&pos,&costoPrima,&exitoPrima);
+
+
+
+    if(exitoPrima != 0){
+        int iguales = CompararNuplas(nuplaBaja,ral->electores[pos]);
+
+        if(iguales != 0){
+            ral->electores[pos].estado = 2;
+            ral->cantidad--;
+            *costo = (float)costoPrima;
+            *exito = 1;
+            return;
+        }else{
+            *exito = 0;
+            return;
+        }
+    }else{
+        *exito = 0;
+        return;
+    }
+
+
+
 }
 
 int main()
