@@ -69,6 +69,7 @@ int hashing(int dni, int M) {
 
     Codificación de Estados para las celdas
     0: Virgen.
+    1: Ocupada
     2: Libre.
     DECISIÓN DE IMPLEMENTACIÓN DE CODIFICACIÓN
     Wanzo, voy a implementarlo en el struct elector, donde cada elector va tener un parametro llamado
@@ -111,10 +112,45 @@ void LocalizarRAL(RAL *ral,long dni_buscado,int *pos,int *exito,int *costo){
 
         int estado = ral->electores[actual].estado;
 
+        switch(estado){
+            case 0:{
+                if(primera_libre != -1){
+                    *pos = primeraLibre;
+                }else{
+                    *pos = actual;
+                }
+                return;
+            }
+
+            case 1:{
+                if(ral->electores[actual].dni == dni_buscado){
+                    *pos = actual;
+                    *exito = 1;
+                    return;
+                }
+            }
+
+            case 2:{
+                //Se guarda la primera libre, entonces si es distinto de -1, no encontro una libre anteriormente.
+                if (primeraLibre == -1){
+                    primeraLibre = actual;
+                }
+
+            }
+        }
+
+        //Recirculación Lineal
+        actual = (actual + 1) % M_RAL;
+        celdasRecorridas++; //Aumentamos el contador para que siga recorriendo
+
     }
 
+    *pos = (primera_libre != -1) ? primera_libre : actual; //Me corrigio esta linea gemini, no se porque ponerla.
 
 
+}
+
+void AltaRAL(){
 
 }
 
