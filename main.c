@@ -1,9 +1,13 @@
 ///LIBRERIAS
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 ///CONSTANTES.
 
 #define ELECTORES_ESPERADOS 2000
+
+//RAL
+#define M_RAL 2531
 
 
 //Definicion de struc's Patron
@@ -45,6 +49,19 @@ void RegistrarCosto(MetricasOp *m, float costo_individual) {
 }
 
 
+int hashing(int dni, int M) {
+    char x[10];
+    int longitud, i;
+    int contador = 0;
+
+    sprintf(x, "%d", dni);
+    longitud = strlen(x);
+    for (i = 0; i < longitud; i++) {
+        contador += ((int)x[i]) * (i + 1);
+    }
+    return (contador % M);
+}
+
 /*
 
  REBALSE ABIERTO LINEAL (RAL)
@@ -65,7 +82,8 @@ typedef struct{
 }RAL;
 
 void InitRAL(RAL *ral){
-    ral.cantidad->0;
+
+    (*ral).cantidad=0;
 
     for(int i = 0; i < ELECTORES_ESPERADOS;i++){
         ral->electores[i].estado = 0;
@@ -76,9 +94,29 @@ void InitRAL(RAL *ral){
         ral->electores[i].nombreApellido[0] = '\0';
         ral->electores[i].domicilio[0] = '\0';
     }
-
 }
 
+
+void LocalizarRAL(RAL *ral,long dni_buscado,int *pos,int *exito,int *costo){
+
+    int actual = hashing((int)dni_buscado,M_RAL);
+    int primeraLibre = -1;
+    int celdasRecorridas = 0;
+
+    *exito = 0;
+    *costo = 0;
+
+    while(celdasRecorridas < M_RAL){
+        (*costo)++;
+
+        int estado = ral->electores[actual].estado;
+
+    }
+
+
+
+
+}
 
 int main()
 {
