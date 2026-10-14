@@ -325,9 +325,7 @@ void AltaRAC(RAC *rac, elector nuevoElector, float *costo, int *exito){
     int costoPrima = 0; //Valor descartable
     int exitoPrima = 0;
     int pos;
-
     LocalizarRAC(rac, nuevoElector.dni, &pos, &costoPrima, &exitoPrima);
-
     if(exitoPrima == 0){
         nuevoElector.estado = 1;
         rac->electores[pos] = nuevoElector;
@@ -342,7 +340,6 @@ void AltaRAC(RAC *rac, elector nuevoElector, float *costo, int *exito){
 }
 
 void BajaRAC(RAC *rac, elector nuplaBaja, int *exito, float *costo){
-
     int pos, costoPrima, exitoPrima;
     LocalizarRAC(rac, nuplaBaja.dni, &pos, &costoPrima, &exitoPrima);
 
