@@ -7,6 +7,10 @@
 
 #define ELECTORES_ESPERADOS 2000
 
+//RS
+// Tamaño de la tabla RS (N = 2000, rho = 1.61 -> M = 2000 / 1.61 = 1242.23)
+#define M_RS 1243
+
 //RAL
 #define M_RAL 2531 //(Para el RAL se tendra  ρ= 0.79.)
 
@@ -24,7 +28,7 @@ typedef struct {
 
 typedef struct {
     int cantidad;
-    float costo_acu;s
+    float costo_acu;
     float costo_max;
 } MetricasOp;
 
@@ -88,12 +92,10 @@ int CompararNuplas(elector e1, elector e2) {
     return 0;
 }
 
-/*
+//REBALSE ABIERTO LINEAL (RAL)
+//(Para el RAL se tendra  ρ= 0.79.)
 
- REBALSE ABIERTO LINEAL (RAL)
-(Para el RAL se tendra  ρ= 0.79.)
-
-    Codificación de Estados para las celdas
+/*    Codificación de Estados para las celdas
     0: Virgen.
     1: Ocupada
     2: Libre.
@@ -377,8 +379,239 @@ void EvocacionRAC(RAC *rac, long dni_buscado, elector *elector_evocado, int *exi
     }
 }
 
-int main()
-{
-    printf("Hello world!\n");
+
+//Rebalse Separado
+
+typedef struct NodoRS {
+    elector e;                 // El balde con una ranura
+    struct NodoRS *siguiente;  // Puntero al siguiente nodo
+} NodoRS;
+
+typedef struct {
+    NodoRS *tabla[M_RS];       // Arreglo de punteros a los nodos
+    int cantidad;
+} RS;
+
+void InitRS(RS *rs) {
+    rs->cantidad = 0;
+
+    // Inicializacion de todas las cabeceras apuntando a NULL
+    for(int i = 0; i < M_RS; i++) {
+        rs->tabla[i] = NULL;
+    }
+}
+
+int LocalizarRS(RS *rs, long dni_buscado, NodoRS **posicion, float *costo) {
+    // Calculo del indice con la funcion de hashing
+    int indice = hashing(dni_buscado, M_RS);
+
+    // Inicio de la búsqueda en la posición dada por h(x)
+    NodoRS *p = rs->tabla[indice];
+    *costo = 0.0;
+
+    while (p != NULL && p->e.dni != dni_buscado) {
+        (*costo)++;       // Contamos cada nodo visitado
+        p = p->siguiente;
+    }
+
+    if (p != NULL) {
+        // Salimos porque p->e.dni == dni_buscado
+        (*costo)++;    // Contamos la comparacion que dio exito (PREGUNTAR AL PROFE)
+        *posicion = p; // Guardamos la direccion del nodo encontrado
+        return 1;      // Exito papa
+    } else {
+        // Salimos porque p llego a NULL (no se encontro)
+        *posicion = NULL;
+        return 0;      // Fracaso
+    }
+}
+
+int AltaRS(RS *rs, elector nuevo_elector, Estadisticas *stats) {
+    NodoRS *posicion = NULL;
+    float costo_localizar = 0.0;
+
+    // Localizar
+    int existe = LocalizarRS(rs, nuevo_elector.dni, &posicion, &costo_localizar);
+
+    if (existe == 1) {
+        // Fracasa
+        return 0;
+    } else {
+        // Verificacion del espacio en memoria
+        NodoRS *nuevo_nodo = (NodoRS*)malloc(sizeof(NodoRS));
+
+        if (nuevo_nodo != NULL) {
+            // Modificacion en la estructura
+            nuevo_nodo->e = nuevo_elector;
+            // Calculamos el indice
+            int indice = hashing(nuevo_elector.dni, M_RS);
+
+            // Insertamos el nodo al PRINCIPIO de la LVD
+            nuevo_nodo->siguiente = rs->tabla[indice];
+            rs->tabla[indice] = nuevo_nodo;
+
+            // Aumentamos el contador total de electores en la tabla
+            rs->cantidad++;
+
+            RegistrarCosto(&(stats->alta), costo_localizar + 1.0);
+
+            return 1; // Exito
+        } else {
+            // Fracasa
+            return 0;
+        }
+    }
+}
+
+int BajaRS(RS *rs, elector elector_baja, Estadisticas *stats) {
+    NodoRS *posicion = NULL;
+    float costo_localizar = 0.0;
+
+    int existe = LocalizarRS(rs, elector_baja.dni, &posicion, &costo_localizar);
+
+    // Confirmo la nupla completa
+    if (existe == 1 && CompararNuplas(posicion->e, elector_baja) == 1) {
+
+        // Modificacion estructural
+        int indice = hashing(elector_baja.dni, M_RS);
+        NodoRS *actual = rs->tabla[indice];
+        NodoRS *anterior = NULL;
+
+        // Como necesitamos el nodo 'anterior' para desenlazar,
+        // avanzamos hasta llegar a la posición que nos dio el Localizar
+        while (actual != posicion) {
+            anterior = actual;
+            actual = actual->siguiente;
+        }
+
+        // Vemos el nodo
+        if (anterior == NULL) {
+            // Era el primero de la lista
+            rs->tabla[indice] = actual->siguiente;
+        } else {
+            // Estaba en el medio o al final
+            anterior->siguiente = actual->siguiente;
+        }
+
+        free(actual);   // Liberamos memoria
+        rs->cantidad--; // Actualizamos contador
+        RegistrarCosto(&(stats->baja), costo_localizar);
+        return 1; // Exito
+
+    } else {
+        RegistrarCosto(&(stats->baja), costo_localizar);
+        return 0; // Fracasa
+    }
+}
+
+int EvocacionRS(RS *rs, long dni_buscado, elector *elector_recuperado, Estadisticas *stats) {
+    NodoRS *posicion = NULL;
+    float costo_localizar = 0.0;
+
+    int existe = LocalizarRS(rs, dni_buscado, &posicion, &costo_localizar);
+
+    if (existe == 1) {
+        // Copiamos los datos
+        *elector_recuperado = posicion->e;
+
+        RegistrarCosto(&(stats->evocar_exito), costo_localizar);
+        return 1;
+    } else {
+        RegistrarCosto(&(stats->evocar_fracaso), costo_localizar);
+        return 0; //Fracasa
+    }
+}
+
+//FUNCIONES PARA IMPRIMIR!
+
+void ProcesarArchivo(RS *rs, Estadisticas *stats_rs) {
+    FILE *archivo = fopen("Operaciones Padron.txt", "r");
+    if (archivo == NULL) {
+        printf("Error: No se pudo abrir 'Operaciones Padron.txt'.\n");
+        return;
+    }
+
+    int operacion;
+    // Leer hasta el fin de archivo
+    while (fscanf(archivo, "%d\n", &operacion) == 1) {
+        elector e;
+
+        if (operacion == 1 || operacion == 2) {
+            // Alta o Baja: Leemos la nupla completa
+            fscanf(archivo, "%ld\n", &e.dni);
+
+            fgets(e.nombreApellido, 50, archivo);
+            e.nombreApellido[strcspn(e.nombreApellido, "\n")] = 0; // Eliminar salto de línea
+
+            fgets(e.domicilio, 80, archivo);
+            e.domicilio[strcspn(e.domicilio, "\n")] = 0; // Eliminar salto de línea
+
+            fscanf(archivo, "%d\n", &e.codigoPostal);
+            fscanf(archivo, "%d\n", &e.numeroMesa);
+            fscanf(archivo, "%d\n", &e.circuito);
+            e.estado = 1; // 1: Ocupado
+
+            if (operacion == 1) {
+                AltaRS(rs, e, stats_rs);
+            } else if (operacion == 2) {
+                BajaRS(rs, e, stats_rs);
+            }
+
+        } else if (operacion == 3) {
+            // Evocación: Solo leemos el DNI
+            long dni_buscado;
+            elector recuperado;
+            fscanf(archivo, "%ld\n", &dni_buscado);
+
+            EvocacionRS(rs, dni_buscado, &recuperado, stats_rs);
+        }
+    }
+
+    fclose(archivo);
+    printf("Archivo procesado con exito.\n");
+}
+
+// Funcion auxiliar interna para imprimir una fila de metricas
+void ImprimirBloqueMetrica(const char* nombre_op, MetricasOp m_rs) {
+    float prom_rs = (m_rs.cantidad > 0) ? (m_rs.costo_acu / m_rs.cantidad) : 0.0;
+
+    // Vacio para que venga el RAC y RAL
+    printf("%s\n", nombre_op);
+    printf("  %-16s | %15s | %15s | %15d |\n", "Cantidad", "-", "-", m_rs.cantidad);
+    printf("  %-16s | %15s | %15s | %15.3f |\n", "Costo Acumulado", "-", "-", m_rs.costo_acu);
+    printf("  %-16s | %15s | %15s | %15.3f |\n", "Costo Maximo", "-", "-", m_rs.costo_max);
+    printf("  %-16s | %15s | %15s | %15.3f |\n", "Costo Promedio", "-", "-", prom_rs);
+    printf("-------------------|-----------------|-----------------|-----------------|\n");
+}
+
+void MostrarTablaComparativa(Estadisticas stats_rs) {
+    printf("\n");
+    printf("-------------------|-----------------|-----------------|-----------------|\n");
+    printf("                   |       RAL       |       RAC       |        RS       |\n");
+    printf("-------------------|-----------------|-----------------|-----------------|\n");
+
+    ImprimirBloqueMetrica("Alta", stats_rs.alta);
+    ImprimirBloqueMetrica("Baja", stats_rs.baja);
+    ImprimirBloqueMetrica("Evocar exitoso", stats_rs.evocar_exito);
+    ImprimirBloqueMetrica("Evocar fracaso", stats_rs.evocar_fracaso);
+}
+
+int main() {
+    // 1. Declaración e inicialización
+    RS rebalse_separado;
+    InitRS(&rebalse_separado);
+
+    Estadisticas estadisticas_rs;
+    InicializarMetricas(&estadisticas_rs.alta);
+    InicializarMetricas(&estadisticas_rs.baja);
+    InicializarMetricas(&estadisticas_rs.evocar_exito);
+    InicializarMetricas(&estadisticas_rs.evocar_fracaso);
+
+    // 2. Procesamiento masivo (Opción del menú)
+    ProcesarArchivo(&rebalse_separado, &estadisticas_rs);
+
+    // 3. Mostrar tabla (Opción del menú)
+    MostrarTablaComparativa(estadisticas_rs);
+
     return 0;
 }
