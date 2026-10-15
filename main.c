@@ -250,6 +250,14 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
 
 void AltaRAC(RAC *rac, elector nuevoElector, float *costo, int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
+
+    // Bloqueo por estructura LLENA
+    if (rac->cantidad == M_RAC) {
+        *costo = 0.0;
+        *exito = 0;
+        return;
+    }
+
     LocalizarRAC(rac, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
     *costo = (float)costoPrima;
 
