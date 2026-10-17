@@ -14,6 +14,8 @@
 //RAL
 #define M_RAL 2531 //(Para el RAL se tendra  ρ= 0.79.)
 
+//RAC
+#define M_RAC
 
 //Definicion de struc's Patron
 typedef struct {
