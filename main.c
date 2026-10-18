@@ -16,6 +16,8 @@
 //RAC (Primo cercano para rho = 0.83)
 #define M_RAC 2411
 
+//Contante para imprimir
+#define LINEAS_POR_PAGINA 20
 
 //Definicion de structs
 typedef struct {
@@ -89,9 +91,7 @@ int CompararNuplas(elector e1, elector e2) {
     return 0;
 }
 
-
 // --- REBALSE ABIERTO LINEAL (RAL) ---
-
 typedef struct{
     elector electores[M_RAL];
     int cantidad;
@@ -148,7 +148,7 @@ void AltaRAL(RAL *ral, elector nuevoElector, float *costo, int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
 
     LocalizarRAL(ral, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
-    *costo = (float)costoPrima; // Se asigna el costo siempre
+    *costo = (float)costoPrima;
 
     if(exitoPrima == 0){
         nuevoElector.estado = 1;
@@ -190,9 +190,7 @@ void EvocacionRAL(RAL *ral, long dni_buscado, elector *elector_evocado, int *exi
     }
 }
 
-
 // --- REBALSE ABIERTO CUADRATICO (RAC) ---
-
 typedef struct{
     elector electores[M_RAC];
     int cantidad;
@@ -252,7 +250,6 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
 void AltaRAC(RAC *rac, elector nuevoElector, float *costo, int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
 
-    // Bloqueo por estructura LLENA
     if (rac->cantidad == M_RAC) {
         *costo = 0.0;
         *exito = 0;
@@ -302,9 +299,7 @@ void EvocacionRAC(RAC *rac, long dni_buscado, elector *elector_evocado, int *exi
     }
 }
 
-
 // --- REBALSE SEPARADO (RS) ---
-
 typedef struct NodoRS {
     elector e;
     struct NodoRS *siguiente;
@@ -322,34 +317,54 @@ void InitRS(RS *rs) {
     }
 }
 
-void LocalizarRS(RS *rs, long dni_buscado, NodoRS **posicion, int *exito, float *costo) {
+//Libera todos los nodos
+void DestruirRS(RS *rs) {
+    for (int i = 0; i < M_RS; i++) {
+        NodoRS *p = rs->tabla[i];
+        while (p != NULL) {
+            NodoRS *aux = p;
+            p = p->siguiente;
+            free(aux);
+        }
+        rs->tabla[i] = NULL;
+    }
+    rs->cantidad = 0;
+}
+
+void LocalizarRS(RS *rs, long dni_buscado, NodoRS **posicion, NodoRS **anterior, int *exito, float *costo) {
     int indice = hashing((int)dni_buscado, M_RS);
     NodoRS *p = rs->tabla[indice];
-    *costo = 0.0;
+    NodoRS *ant = NULL;
+
+    *costo = 1.0;
 
     while (p != NULL && p->e.dni != dni_buscado) {
         (*costo)++;
+        ant = p;
         p = p->siguiente;
     }
 
     if (p != NULL) {
         (*costo)++;
         *posicion = p;
+        *anterior = ant;
         *exito = 1;
     } else {
         *posicion = NULL;
+        *anterior = ant;   //ultimo nodo recorrido, o NULL si lista vacia
         *exito = 0;
     }
 }
 
 void AltaRS(RS *rs, elector nuevo_elector, int *exito, Estadisticas *stats) {
     NodoRS *posicion = NULL;
+    NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
 
-    LocalizarRS(rs, nuevo_elector.dni, &posicion, exito, &costo_localizar);
+    LocalizarRS(rs, nuevo_elector.dni, &posicion, &anterior, exito, &costo_localizar);
 
     if (*exito == 1) {
-        *exito = 0;
+        *exito = 2; //Fracaso ya existe el X
     } else {
         NodoRS *nuevo_nodo = (NodoRS*)malloc(sizeof(NodoRS));
         if (nuevo_nodo != NULL) {
@@ -359,38 +374,30 @@ void AltaRS(RS *rs, elector nuevo_elector, int *exito, Estadisticas *stats) {
             nuevo_nodo->siguiente = rs->tabla[indice];
             rs->tabla[indice] = nuevo_nodo;
             rs->cantidad++;
-
-            RegistrarCosto(&(stats->alta), costo_localizar + 1.0);
-            *exito = 1;
+            RegistrarCosto(&(stats->alta), costo_localizar);
+            *exito = 1; //Exito
         } else {
-            *exito = 0;
+            *exito = 0; //Fracaso, sin memoria
         }
     }
 }
 
 void BajaRS(RS *rs, elector elector_baja, int *exito, Estadisticas *stats) {
     NodoRS *posicion = NULL;
+    NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
 
-    LocalizarRS(rs, elector_baja.dni, &posicion, exito, &costo_localizar);
+    LocalizarRS(rs, elector_baja.dni, &posicion, &anterior, exito, &costo_localizar);
 
     if (*exito == 1 && CompararNuplas(posicion->e, elector_baja) == 1) {
-        int indice = hashing((int)elector_baja.dni, M_RS);
-        NodoRS *actual = rs->tabla[indice];
-        NodoRS *anterior = NULL;
-
-        while (actual != posicion) {
-            anterior = actual;
-            actual = actual->siguiente;
-        }
-
         if (anterior == NULL) {
-            rs->tabla[indice] = actual->siguiente;
+            int indice = hashing((int)elector_baja.dni, M_RS);
+            rs->tabla[indice] = posicion->siguiente;
         } else {
-            anterior->siguiente = actual->siguiente;
+            anterior->siguiente = posicion->siguiente;
         }
 
-        free(actual);
+        free(posicion);
         rs->cantidad--;
         RegistrarCosto(&(stats->baja), costo_localizar);
         *exito = 1;
@@ -400,11 +407,13 @@ void BajaRS(RS *rs, elector elector_baja, int *exito, Estadisticas *stats) {
     }
 }
 
-void EvocacionRS(RS *rs, long dni_buscado, elector *elector_recuperado, int *exito, Estadisticas *stats) {
+void EvocacionRS(RS *rs, long dni_buscado, elector *elector_recuperado,
+                 int *exito, Estadisticas *stats) {
     NodoRS *posicion = NULL;
+    NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
 
-    LocalizarRS(rs, dni_buscado, &posicion, exito, &costo_localizar);
+    LocalizarRS(rs, dni_buscado, &posicion, &anterior, exito, &costo_localizar);
 
     if (*exito == 1) {
         *elector_recuperado = posicion->e;
@@ -414,17 +423,75 @@ void EvocacionRS(RS *rs, long dni_buscado, elector *elector_recuperado, int *exi
     }
 }
 
-void MostrarRS(RS *rs) { printf("\n(Implementar logica de paginado para RS aqui)\n"); }
+//FUNCIONES DE MOSTRAR
+
+void LimpiarBufferEntrada(void) {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+void PausarPagina(void) {
+    printf("\n-- Presione Enter para continuar --");
+    fflush(stdout);
+    LimpiarBufferEntrada();
+}
+void MostrarRS(RS *rs) {
+    int lineas = 0;
+    int i;
+    NodoRS *p;
+
+    if (rs->cantidad == 0) {
+        printf("\nEstructura RS vacia. Cantidad de elementos: 0\n");
+        return;
+    }
+    LimpiarBufferEntrada();
+
+    printf("\n================ ESTRUCTURA REBALSE SEPARADO ================\n");
+    printf("M_RS = %d | Cantidad de elementos = %d\n", M_RS, rs->cantidad);
+    printf("=============================================================\n");
+
+    for (i = 0; i < M_RS; i++) {
+        p = rs->tabla[i];
+
+        if (p == NULL) {
+            printf("Lista [%4d]: (vacia)\n", i);
+            lineas++;
+
+            if (lineas % LINEAS_POR_PAGINA == 0) {
+                PausarPagina();
+            }
+        } else {
+            printf("Lista [%4d]:\n", i);
+            lineas++;
+
+            if (lineas % LINEAS_POR_PAGINA == 0) {
+                PausarPagina();
+            }
+
+            while (p != NULL) {
+                printf("   DNI=%ld | Nombre=%s | Domicilio=%s | CP=%d | Mesa=%d | Circuito=%d | Estado=%d\n", p->e.dni, p->e.nombreApellido,p->e.domicilio,
+                       p->e.codigoPostal, p->e.numeroMesa,p->e.circuito, p->e.estado);
+                lineas++;
+                p = p->siguiente;
+                if (lineas % LINEAS_POR_PAGINA == 0) {
+                    PausarPagina();
+                }
+            }
+        }
+    }
+
+    printf("\n================ FIN ESTRUCTURA REBALSE SEPARADO ============\n");
+}
 void MostrarRAL(RAL *ral) { printf("\n(Implementar logica de paginado para RAL aqui)\n"); }
 void MostrarRAC(RAC *rac) { printf("\n(Implementar logica de paginado para RAC aqui)\n"); }
-
 
 /* ==========================================================================
    MEMORIZACIÓN DESDE ARCHIVO
    ========================================================================== */
 
 int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Estadisticas *statsRAL, Estadisticas *statsRAC){
-    InitRS(rs);
+    //Liberar datos previos (si los hay) y dejar RS en estado limpio.
+    DestruirRS(rs);
     InitRAL(ral);
     InitRAC(rac);
 
@@ -451,7 +518,6 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
     InicializarMetricas(&statsRAC->evocar_fracaso);
 
     if (archivo == NULL) {
-        printf("Error: No se pudo abrir el archivo.\n");
         return 0;
     }
 
@@ -459,7 +525,6 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
         int codigoOp = atoi(buffer);
 
         if(codigoOp == 1 || codigoOp == 2){ // Alta o baja
-
             if (fgets(buffer, sizeof(buffer), archivo) == NULL) break;
             eTemp.dni = atol(buffer);
 
@@ -508,7 +573,6 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
             }
 
         } else if(codigoOp == 3){ // Evocación
-
             if (fgets(buffer, sizeof(buffer), archivo) == NULL) break;
             long dniEvocar = atol(buffer);
 
@@ -552,6 +616,12 @@ int main() {
 
     Estadisticas statsRS, statsRAL, statsRAC;
 
+    /* Inicializar antes de cualquier uso: así DestruirRS es seguro
+       en la primera llamada a memorizarDesdeArchivo. */
+    InitRS(&miRS);
+    InitRAL(&miRAL);
+    InitRAC(&miRAC);
+
     int opcion;
     int estructurasCargadas = 0;
 
@@ -569,18 +639,18 @@ int main() {
         LimpiarPantalla();
 
         switch(opcion) {
-            case 1:
+            case 1: {
                 printf("\nIniciando procesamiento del archivo de operaciones...\n");
 
-                int cargaExitosa = memorizarDesdeArchivo(&miRS, &miRAL, &miRAC, &statsRS, &statsRAL, &statsRAC);
+                int cargaExitosa = memorizarDesdeArchivo(&miRS, &miRAL, &miRAC,
+                                                         &statsRS, &statsRAL, &statsRAC);
 
                 if (cargaExitosa == 0) {
-                    printf("Se aborto la ejecucion debido a un error en el archivo.\n");
+                    printf("Se aborto la ejecucion: no se pudo abrir el archivo.\n");
                 } else {
                     estructurasCargadas = 1;
                     printf("Procesamiento exitoso.\n");
 
-                    // --- IMPRESIÓN DE LA TABLA DE COMPARACIÓN DE COSTOS ---
                     printf("\n-----------------------------|--------------|--------------|--------------|\n");
                     printf("                             |      RS      |      RAL     |      RAC     |\n");
                     printf("-----------------------------|--------------|--------------|--------------|\n");
@@ -634,6 +704,7 @@ int main() {
                     getchar();
                 }
                 break;
+            }
 
             case 2:
                 if (estructurasCargadas == 0) {
@@ -654,15 +725,11 @@ int main() {
                         MostrarRS(&miRS);
                     } else if (subOpcion == 2) {
                         MostrarRAL(&miRAL);
+                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
                     } else if (subOpcion == 3) {
                         MostrarRAC(&miRAC);
-                    } else {
-                        printf("\nOpcion invalida.\n");
+                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
                     }
-
-                    int c;
-                    while ((c = getchar()) != '\n' && c != EOF);
-                    getchar();
                 }
                 break;
 
@@ -675,6 +742,9 @@ int main() {
         }
 
     } while(opcion != 3);
+
+    //Liberar toda la memoria dinamica del RS antes de salir.
+    DestruirRS(&miRS);
 
     return 0;
 }
