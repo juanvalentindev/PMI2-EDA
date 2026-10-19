@@ -438,13 +438,13 @@ void MostrarRS(RS *rs) {
     int lineas_impresas = 0;
 
     for (int i = 0; i < M_RS; i++) {
-        printf("[%04d] ", i); // Imprime el índice de la tabla hash
+        printf("[%04d] ", i); // Imprime el indice de la tabla hash
 
         NodoRS *actual = rs->tabla[i];
 
-        // Verificar si la lista está vacía o contiene elementos
+        // Verificar si la lista esta vacía o contiene elementos
         if (actual == NULL) {
-            printf("LISTA VACIA\n");
+            printf("LA LISTA ESTA VACIA\n");
         } else {
             printf("Elementos en la lista:\n");
 
@@ -486,17 +486,16 @@ void MostrarRAL(RAL *ral) {
 
     int lineas_impresas = 0;
 
-
     for (int i = 0; i < M_RAL; i++) {
         int estado = ral->electores[i].estado;
 
         printf("[%04d] ", i);
 
         if (estado == 0) {
-            printf("NUNCA USADA (Virgen)\n");
+            printf("NUNCA HA SIDO OCUPADA (Celda virgen)\n");
         }
         else if (estado == 2) {
-            printf("LIBRE (Dada de baja)\n");
+            printf("VACIO (Celda libre tras baja)\n");
         }
         else if (estado == 1) {
             elector e = ral->electores[i];
@@ -513,7 +512,7 @@ void MostrarRAL(RAL *ral) {
 
         if (lineas_impresas % 15 == 0) {
             printf("----------------------------------------------------------------------------------------\n");
-            printf("Mostrando %d de %d posiciones. Presione ENTER ", i + 1, M_RAL);
+            printf("Mostrando %d de %d posiciones. Presione ENTER para ver las siguientes...", i + 1, M_RAL);
 
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
@@ -527,11 +526,10 @@ void MostrarRAL(RAL *ral) {
 
 void MostrarRAC(RAC *rac) {
     printf("\n========================================================================================\n");
-    printf("                              ESTRUCTURA RAL (M = %d)\n", M_RAC);
+    printf("                              ESTRUCTURA RAC (M = %d)\n", M_RAC);
     printf("========================================================================================\n");
 
     int lineas_impresas = 0;
-
 
     for (int i = 0; i < M_RAC; i++) {
         int estado = rac->electores[i].estado;
@@ -539,15 +537,12 @@ void MostrarRAC(RAC *rac) {
         printf("[%04d] ", i);
 
         if (estado == 0) {
-
-            printf("NUNCA USADA (Virgen)\n");
+            printf("NUNCA HA SIDO OCUPADA (Celda virgen)\n");
         }
         else if (estado == 2) {
-
-            printf("LIBRE (Dada de baja)\n");
+            printf("VACIO (Celda libre tras baja)\n");
         }
         else if (estado == 1) {
-
             elector e = rac->electores[i];
             printf("OCUPADA -> DNI: %ld | Nombre: %s | Domicilio: %s | CP: %d | Mesa: %d | Circuito: %d\n",
                    e.dni,
@@ -562,7 +557,7 @@ void MostrarRAC(RAC *rac) {
 
         if (lineas_impresas % 15 == 0) {
             printf("----------------------------------------------------------------------------------------\n");
-            printf("Mostrando %d de %d posiciones. Presione ENTER para ver las siguientes 15...", i + 1, M_RAL);
+            printf("Mostrando %d de %d posiciones. Presione ENTER para ver las siguientes...", i + 1, M_RAC);
 
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
@@ -573,6 +568,7 @@ void MostrarRAC(RAC *rac) {
     printf("Total de electores cargados en RAC: %d\n", rac->cantidad);
     printf("========================================================================================\n");
 }
+
 /* ==========================================================================
    MEMORIZACIÓN DESDE ARCHIVO
    ========================================================================== */
