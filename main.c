@@ -113,6 +113,7 @@ void LocalizarRAL(RAL *ral, long dni_buscado, int *pos, int *exito, int *costo){
     *exito = 0;
     *costo = 0;
 
+
     while(celdasRecorridas < M_RAL){
         (*costo)++;
         int estado = ral->electores[actual].estado;
@@ -142,6 +143,11 @@ void LocalizarRAL(RAL *ral, long dni_buscado, int *pos, int *exito, int *costo){
 
 void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
+
+    if (ral->cantidad == M_RAL) {
+        *exito = 0;
+        return;
+    }
 
     LocalizarRAL(ral, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
 
