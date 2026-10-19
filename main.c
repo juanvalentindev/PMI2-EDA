@@ -1,3 +1,32 @@
+//Grupo 27: Ezequiel Wanzo y Juan Quiroga
+
+/*
+-----------------------------|--------------|--------------|--------------|
+                             |      RS      |      RAL     |      RAC     |
+-----------------------------|--------------|--------------|--------------|
+Evocar exitoso               |              |              |              |
+  Cantidad                   |         2175 |         2175 |         2175 |
+  Costo Acumulado            |    11329.000 |  1217521.000 |    64084.000 |
+  Costo Maximo               |       19.000 |     1964.000 |       65.000 |
+  Costo Promedio             |        5.209 |      559.780 |       29.464 |
+-----------------------------|--------------|--------------|--------------|
+Evocar fracaso               |              |--------------|--------------|
+  Cantidad                   |         2053 |         2053 |         2053 |
+  Costo Acumulado            |    14861.000 |  3243918.000 |   115104.000 |
+  Costo Maximo               |       19.000 |     1998.000 |       68.000 |
+  Costo Promedio             |        7.239 |     1580.087 |       56.066 |
+-----------------------------|--------------|--------------|--------------|
+Notamos que para el Evocar Exitoso, el RAL, observando su costo maximo tuvo que recorrer casi todas las celdas para
+encontrar un elemento, y en general su costo promedio es muy alto respecto al RAC y el RS, donde si bien el
+RAC mantiene costos menores que el ral, el RS supera sustancialmente esos costos, siendo el mas eficiente.
+Analogamente sucede lo mismo en el Evocar Fracasado,
+Por lo que la estructura mas adecuada es el RS, ya que, los elementos repetidos no compiten por el espacio
+evitando conflictos y mas costo.
+
+*/
+
+
+
 ///LIBRERIAS
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +40,7 @@
 #define M_RS 1249
 
 //RAL
-#define M_RAL 2531
+#define M_RAL 2539
 
 //RAC (Primo cercano para rho = 0.83)
 #define M_RAC 2411
