@@ -35,9 +35,6 @@ typedef struct {
 } MetricasOp;
 
 typedef struct {
-
-    /*MetricasOp alta;
-    MetricasOp baja;*/
     MetricasOp evocar_exito;
     MetricasOp evocar_fracaso;
 } Estadisticas;
@@ -143,7 +140,7 @@ void LocalizarRAL(RAL *ral, long dni_buscado, int *pos, int *exito, int *costo){
     *pos = (primeraLibre != -1) ? primeraLibre : actual;
 }
 
-void AltaRAL(RAL *ral, elector nuevoElector,/*, float *costo,*/int *exito){
+void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
 
     LocalizarRAL(ral, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
@@ -158,11 +155,9 @@ void AltaRAL(RAL *ral, elector nuevoElector,/*, float *costo,*/int *exito){
     }
 }
 
-void BajaRAL(RAL *ral, elector nuplaBaja,int *exito/*float *costo*/){
+void BajaRAL(RAL *ral, elector nuplaBaja,int *exito){
     int pos, costoPrima, exitoPrima;
     LocalizarRAL(ral, nuplaBaja.dni, &pos, &exitoPrima, &costoPrima);
-    //*costo = (float)costoPrima;
-
     if(exitoPrima != 0){
         if(CompararNuplas(nuplaBaja, ral->electores[pos]) != 0){
             ral->electores[pos].estado = 2;
@@ -240,24 +235,21 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
         }
 
         celdasRecorridas++;
-        //actual = (pos_inicial + (celdasRecorridas * celdasRecorridas)) % M_RAC;
         actual = (actual + celdasRecorridas) % M_RAC;
     }
 
     *pos = (primeraLibre != -1) ? primeraLibre : actual;
 }
 
-void AltaRAC(RAC *rac, elector nuevoElector, /*float *costo*/int *exito){
+void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
     int costoPrima = 0, exitoPrima = 0, pos;
 
     if (rac->cantidad == M_RAC) {
-        //*costo = 0.0;
         *exito = 0;
         return;
     }
 
     LocalizarRAC(rac, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
-    //*costo = (float)costoPrima;
 
     if(exitoPrima == 0){
         nuevoElector.estado = 1;
@@ -269,10 +261,9 @@ void AltaRAC(RAC *rac, elector nuevoElector, /*float *costo*/int *exito){
     }
 }
 
-void BajaRAC(RAC *rac, elector nuplaBaja, int *exito /*float *costo*/){
+void BajaRAC(RAC *rac, elector nuplaBaja, int *exito){
     int pos, costoPrima, exitoPrima;
     LocalizarRAC(rac, nuplaBaja.dni, &pos, &exitoPrima, &costoPrima);
-    //*costo = (float)costoPrima;
 
     if(exitoPrima != 0){
         if(CompararNuplas(nuplaBaja, rac->electores[pos]) != 0){
@@ -356,7 +347,7 @@ void LocalizarRS(RS *rs, long dni_buscado, NodoRS **posicion, NodoRS **anterior,
     }
 }
 
-void AltaRS(RS *rs, elector nuevo_elector, int *exito/*Estadisticas *stats*/) {
+void AltaRS(RS *rs, elector nuevo_elector, int *exito) {
     NodoRS *posicion = NULL;
     NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
@@ -374,7 +365,6 @@ void AltaRS(RS *rs, elector nuevo_elector, int *exito/*Estadisticas *stats*/) {
             nuevo_nodo->siguiente = rs->tabla[indice];
             rs->tabla[indice] = nuevo_nodo;
             rs->cantidad++;
-            //RegistrarCosto(&(stats->alta), costo_localizar + 1.0);
             *exito = 1;
         } else {
             *exito = 0; //Fracaso, sin memoria
@@ -382,7 +372,7 @@ void AltaRS(RS *rs, elector nuevo_elector, int *exito/*Estadisticas *stats*/) {
     }
 }
 
-void BajaRS(RS *rs, elector elector_baja, int *exito/*Estadisticas *stats*/) {
+void BajaRS(RS *rs, elector elector_baja, int *exito) {
     NodoRS *posicion = NULL;
     NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
@@ -399,10 +389,8 @@ void BajaRS(RS *rs, elector elector_baja, int *exito/*Estadisticas *stats*/) {
 
         free(posicion);
         rs->cantidad--;
-        //RegistrarCosto(&(stats->baja), costo_localizar);
         *exito = 1;
     } else {
-        //RegistrarCosto(&(stats->baja), costo_localizar);
         *exito = 0;
     }
 }
@@ -536,24 +524,24 @@ void MostrarRAC(RAC *rac) {
     printf("                              ESTRUCTURA RAL (M = %d)\n", M_RAC);
     printf("========================================================================================\n");
 
-    int lineas_impresas = 0; // Contador para controlar la paginación
+    int lineas_impresas = 0;
 
-    // Se deben mostrar las M posiciones de la estructura
+
     for (int i = 0; i < M_RAC; i++) {
         int estado = rac->electores[i].estado;
 
-        printf("[%04d] ", i); // Imprime el índice de la posición con 4 dígitos para alinear
+        printf("[%04d] ", i);
 
         if (estado == 0) {
-            // Diferenciar celdas nunca usadas
+
             printf("NUNCA USADA (Virgen)\n");
         }
         else if (estado == 2) {
-            // Diferenciar celdas libres
+
             printf("LIBRE (Dada de baja)\n");
         }
         else if (estado == 1) {
-            // Presentar la información completa de los elementos presentes en ella
+
             elector e = rac->electores[i];
             printf("OCUPADA -> DNI: %ld | Nombre: %s | Domicilio: %s | CP: %d | Mesa: %d | Circuito: %d\n",
                    e.dni,
@@ -566,12 +554,10 @@ void MostrarRAC(RAC *rac) {
 
         lineas_impresas++;
 
-        // Pausar cada 15 posiciones mostradas
         if (lineas_impresas % 15 == 0) {
             printf("----------------------------------------------------------------------------------------\n");
             printf("Mostrando %d de %d posiciones. Presione ENTER para ver las siguientes 15...", i + 1, M_RAL);
 
-            // Espera a que el usuario presione ENTER para continuar
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
         }
@@ -598,18 +584,13 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
     FILE *archivo = fopen("Operaciones_Padron.txt", "r");
     char buffer[150];
 
-    //InicializarMetricas(&statsRS->alta);
-    //InicializarMetricas(&statsRS->baja);
     InicializarMetricas(&statsRS->evocar_exito);
     InicializarMetricas(&statsRS->evocar_fracaso);
 
-    //InicializarMetricas(&statsRAL->alta);
-    //InicializarMetricas(&statsRAL->baja);
     InicializarMetricas(&statsRAL->evocar_exito);
     InicializarMetricas(&statsRAL->evocar_fracaso);
 
-    //InicializarMetricas(&statsRAC->alta);
-    //InicializarMetricas(&statsRAC->baja);
+
     InicializarMetricas(&statsRAC->evocar_exito);
     InicializarMetricas(&statsRAC->evocar_fracaso);
 
@@ -645,27 +626,23 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
 
             if(codigoOp == 1){
                 // 1. ALTA RS
-                AltaRS(rs, eTemp, &exitoRS /*statsRS*/);
+                AltaRS(rs, eTemp, &exitoRS);
 
                 // 2. ALTA RAL
-                AltaRAL(ral, eTemp,/* &costoRAL*/ &exitoRAL);
-                //if (exitoRAL == 1) RegistrarCosto(&statsRAL->alta, costoRAL);
+                AltaRAL(ral, eTemp, &exitoRAL);
 
                 // 3. ALTA RAC
-                AltaRAC(rac, eTemp, /*&costoRAC,*/ &exitoRAC);
-                //if (exitoRAC == 1) RegistrarCosto(&statsRAC->alta, costoRAC);
+                AltaRAC(rac, eTemp, &exitoRAC);
 
             } else {
                 // 1. BAJA RS
-                BajaRS(rs, eTemp, &exitoRS/* statsRS*/);
+                BajaRS(rs, eTemp, &exitoRS);
 
                 // 2. BAJA RAL
-                BajaRAL(ral, eTemp, &exitoRAL /*&costoRAL*/);
-                //RegistrarCosto(&statsRAL->baja, costoRAL);
+                BajaRAL(ral, eTemp, &exitoRAL);
 
                 // 3. BAJA RAC
-                BajaRAC(rac, eTemp, &exitoRAC/*&costoRAC*/);
-                //RegistrarCosto(&statsRAC->baja, costoRAC);
+                BajaRAC(rac, eTemp, &exitoRAC);
             }
 
         } else if(codigoOp == 3){ // Evocación
@@ -712,8 +689,6 @@ int main() {
 
     Estadisticas statsRS, statsRAL, statsRAC;
 
-    /* Inicializar antes de cualquier uso: así DestruirRS es seguro
-       en la primera llamada a memorizarDesdeArchivo. */
     InitRS(&miRS);
     InitRAL(&miRAL);
     InitRAC(&miRAC);
@@ -736,6 +711,8 @@ int main() {
 
         switch(opcion) {
             case 1: {
+
+
                 printf("\nIniciando procesamiento del archivo de operaciones...\n");
 
                 int cargaExitosa = memorizarDesdeArchivo(&miRS, &miRAL, &miRAC,
