@@ -167,7 +167,12 @@ void LocalizarRAL(RAL *ral, long dni_buscado, int *pos, int *exito, int *costo){
         actual = (actual + 1) % M_RAL;
         celdasRecorridas++;
     }
-    *pos = (primeraLibre != -1) ? primeraLibre : actual;
+
+    if (primeraLibre != -1) {
+        *pos = primeraLibre;
+    } else {
+        *pos = -1; // Indica que no hay espacio disponible
+    }
 }
 
 void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
@@ -181,10 +186,14 @@ void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
     LocalizarRAL(ral, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
 
     if(exitoPrima == 0){
-        nuevoElector.estado = 1;
-        ral->electores[pos] = nuevoElector;
-        ral->cantidad++;
-        *exito = 1;
+        if (pos != -1) { // <-- Validación crucial que faltaba en main.c
+            nuevoElector.estado = 1;
+            ral->electores[pos] = nuevoElector;
+            ral->cantidad++;
+            *exito = 1;
+        } else {
+            *exito = 0; // Falla por falta de espacio
+        }
     } else {
         *exito = 0;
     }
@@ -273,7 +282,11 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
         actual = (actual + celdasRecorridas) % M_RAC;
     }
 
-    *pos = (primeraLibre != -1) ? primeraLibre : actual;
+    if (primeraLibre != -1) {
+            *pos = primeraLibre;
+        } else {
+            *pos = -1;
+        }
 }
 
 void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
@@ -287,10 +300,14 @@ void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
     LocalizarRAC(rac, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
 
     if(exitoPrima == 0){
-        nuevoElector.estado = 1;
-        rac->electores[pos] = nuevoElector;
-        rac->cantidad++;
-        *exito = 1;
+        if(pos != -1){
+            nuevoElector.estado = 1;
+            rac->electores[pos] = nuevoElector;
+            rac->cantidad++;
+            *exito = 1;
+        }else{
+            *exito = 0;
+        }
     } else {
         *exito = 0;
     }
@@ -829,6 +846,7 @@ int main() {
 
                     if (subOpcion == 1) {
                         MostrarRS(&miRS);
+                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
                     } else if (subOpcion == 2) {
                         MostrarRAL(&miRAL);
                         int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
