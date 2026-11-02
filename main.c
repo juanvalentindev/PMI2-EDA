@@ -37,13 +37,15 @@ evitando conflictos y mas costo.
 #define ELECTORES_ESPERADOS 2000
 
 //RS (N = 2000 / 1.61)
-#define M_RS 1242
-
+//#define M_RS 1242
+#define M_RS 7
 //RAL (N = 2000 / 0.79)
-#define M_RAL 2531
+//#define M_RAL 2531
+#define M_RAL 7
 
 //RAC (Primo cercano para rho = 0.83)
-#define M_RAC 2411
+//z#define M_RAC 2411
+#define M_RAC 7
 
 
 //Definicion de structs
@@ -256,8 +258,8 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
     *exito = 0;
     *costo = 0;
 
-    int limite_secuencia = (M_RAC + 1) / 2;
-    while(celdasRecorridas < limite_secuencia){
+    //int limite_secuencia = (M_RAC + 1) / 2;
+    while(celdasRecorridas < M_RAC){
         (*costo)++;
         int estado = rac->electores[actual].estado;
 
