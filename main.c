@@ -37,16 +37,14 @@ evitando conflictos y mas costo.
 #define ELECTORES_ESPERADOS 2000
 
 //RS (N = 2000 / 1.61)
-//#define M_RS 1242
-#define M_RS 7
+#define M_RS 1242
+
 //RAL (N = 2000 / 0.79)
-//#define M_RAL 2531
-#define M_RAL 7
+#define M_RAL 2531
+
 
 //RAC (Primo cercano para rho = 0.83)
-//#define M_RAC 2411
-#define M_RAC 7
-
+#define M_RAC 2411
 
 //Definicion de structs
 typedef struct {
