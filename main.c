@@ -1,4 +1,4 @@
-//Grupo 27: Ezequiel Wanzo y Juan Quiroga
+//Grupo 28: Ezequiel Wanzo y Juan Quiroga
 
 /*
 -----------------------------|--------------|--------------|--------------|
@@ -36,11 +36,11 @@ evitando conflictos y mas costo.
 ///CONSTANTES
 #define ELECTORES_ESPERADOS 2000
 
-//RS (Primo cercano a 2000 / 1.61)
-#define M_RS 1249
+//RS (N = 2000 / 1.61)
+#define M_RS 1242
 
-//RAL
-#define M_RAL 2539
+//RAL (N = 2000 / 0.79)
+#define M_RAL 2531
 
 //RAC (Primo cercano para rho = 0.83)
 #define M_RAC 2411
@@ -256,7 +256,8 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
     *exito = 0;
     *costo = 0;
 
-    while(celdasRecorridas < M_RAC){
+    int limite_secuencia = (M_RAC + 1) / 2;
+    while(celdasRecorridas < limite_secuencia){
         (*costo)++;
         int estado = rac->electores[actual].estado;
 
@@ -742,6 +743,7 @@ int main() {
     InitRAC(&miRAC);
 
     int opcion;
+    int subOpcion;
     int estructurasCargadas = 0;
 
     do {
@@ -755,6 +757,7 @@ int main() {
         printf("======================================================\n");
         printf("Ingrese una opcion: ");
         scanf("%d", &opcion);
+        LimpiarBufferEntrada();
         LimpiarPantalla();
 
         switch(opcion) {
@@ -830,30 +833,23 @@ int main() {
             }
 
             case 2:
-                if (estructurasCargadas == 0) {
-                    printf("\nError: Debe ejecutar la 'Comparacion de Estructuras' (Opcion 1) primero para cargar los datos.\n");
-                    int c;
-                    while ((c = getchar()) != '\n' && c != EOF);
-                    getchar();
-                } else {
-                    int subOpcion;
-                    printf("\n--- MOSTRAR ESTRUCTURA ---\n");
-                    printf("1. Rebalse Separado (RS)\n");
-                    printf("2. Rebalse Abierto Lineal (RAL)\n");
-                    printf("3. Rebalse Abierto Cuadratico (RAC)\n");
-                    printf("Elija estructura a mostrar: ");
-                    scanf("%d", &subOpcion);
+                printf("\n--- MOSTRAR ESTRUCTURA ---\n");
+                printf("1. Rebalse Separado (RS)\n");
+                printf("2. Rebalse Abierto Lineal (RAL)\n");
+                printf("3. Rebalse Abierto Cuadratico (RAC)\n");
+                printf("Elija estructura a mostrar: ");
+                scanf("%d", &subOpcion);
+                LimpiarBufferEntrada();
 
-                    if (subOpcion == 1) {
-                        MostrarRS(&miRS);
-                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
-                    } else if (subOpcion == 2) {
-                        MostrarRAL(&miRAL);
-                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
-                    } else if (subOpcion == 3) {
-                        MostrarRAC(&miRAC);
-                        int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
-                    }
+                if (subOpcion == 1) {
+                    MostrarRS(&miRS);
+                    int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
+                } else if (subOpcion == 2) {
+                    MostrarRAL(&miRAL);
+                    int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
+                } else if (subOpcion == 3) {
+                    MostrarRAC(&miRAC);
+                    int c; while ((c = getchar()) != '\n' && c != EOF); getchar();
                 }
                 break;
 
