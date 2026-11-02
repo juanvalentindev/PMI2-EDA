@@ -44,7 +44,7 @@ evitando conflictos y mas costo.
 #define M_RAL 7
 
 //RAC (Primo cercano para rho = 0.83)
-//z#define M_RAC 2411
+//#define M_RAC 2411
 #define M_RAC 7
 
 
@@ -68,6 +68,8 @@ typedef struct {
 typedef struct {
     MetricasOp evocar_exito;
     MetricasOp evocar_fracaso;
+    MetricasOp alta_exito; // update(alta)
+    MetricasOp baja_exito; //  update(baja)
 } Estadisticas;
 
 void InicializarMetricas(MetricasOp *m) {
@@ -177,7 +179,7 @@ void LocalizarRAL(RAL *ral, long dni_buscado, int *pos, int *exito, int *costo){
     }
 }
 
-void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
+void AltaRAL(RAL *ral, elector nuevoElector,int *exito,float *costo){
     int costoPrima = 0, exitoPrima = 0, pos;
 
     if (ral->cantidad == M_RAL) {
@@ -186,6 +188,7 @@ void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
     }
 
     LocalizarRAL(ral, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
+    *costo = (float)costoPrima;
 
     if(exitoPrima == 0){
         if (pos != -1) { // <-- Validación crucial que faltaba en main.c
@@ -201,9 +204,10 @@ void AltaRAL(RAL *ral, elector nuevoElector,int *exito){
     }
 }
 
-void BajaRAL(RAL *ral, elector nuplaBaja,int *exito){
+void BajaRAL(RAL *ral, elector nuplaBaja,int *exito,float *costo){
     int pos, costoPrima, exitoPrima;
     LocalizarRAL(ral, nuplaBaja.dni, &pos, &exitoPrima, &costoPrima);
+    *costo = (float)costoPrima;
     if(exitoPrima != 0){
         if(CompararNuplas(nuplaBaja, ral->electores[pos]) != 0){
             ral->electores[pos].estado = 2;
@@ -292,7 +296,7 @@ void LocalizarRAC(RAC *rac, long dni_buscado, int *pos, int *exito, int *costo){
         }
 }
 
-void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
+void AltaRAC(RAC *rac, elector nuevoElector,int *exito,float *costo){
     int costoPrima = 0, exitoPrima = 0, pos;
 
     if (rac->cantidad == M_RAC) {
@@ -301,6 +305,7 @@ void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
     }
 
     LocalizarRAC(rac, nuevoElector.dni, &pos, &exitoPrima, &costoPrima);
+    *costo = (float)costoPrima;
 
     if(exitoPrima == 0){
         if(pos != -1){
@@ -316,10 +321,10 @@ void AltaRAC(RAC *rac, elector nuevoElector,int *exito){
     }
 }
 
-void BajaRAC(RAC *rac, elector nuplaBaja, int *exito){
+void BajaRAC(RAC *rac, elector nuplaBaja, int *exito,float *costo){
     int pos, costoPrima, exitoPrima;
     LocalizarRAC(rac, nuplaBaja.dni, &pos, &exitoPrima, &costoPrima);
-
+    *costo = (float)costoPrima;
     if(exitoPrima != 0){
         if(CompararNuplas(nuplaBaja, rac->electores[pos]) != 0){
             rac->electores[pos].estado = 2;
@@ -402,12 +407,13 @@ void LocalizarRS(RS *rs, long dni_buscado, NodoRS **posicion, NodoRS **anterior,
     }
 }
 
-void AltaRS(RS *rs, elector nuevo_elector, int *exito) {
+void AltaRS(RS *rs, elector nuevo_elector, int *exito,float *costo) {
     NodoRS *posicion = NULL;
     NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
 
     LocalizarRS(rs, nuevo_elector.dni, &posicion, &anterior, exito, &costo_localizar);
+    *costo = costo_localizar;
 
     if (*exito == 1) {
         *exito = 2; //Fracaso ya existe el X
@@ -427,12 +433,13 @@ void AltaRS(RS *rs, elector nuevo_elector, int *exito) {
     }
 }
 
-void BajaRS(RS *rs, elector elector_baja, int *exito) {
+void BajaRS(RS *rs, elector elector_baja, int *exito,float *costo) {
     NodoRS *posicion = NULL;
     NodoRS *anterior = NULL;
     float costo_localizar = 0.0;
 
     LocalizarRS(rs, elector_baja.dni, &posicion, &anterior, exito, &costo_localizar);
+    *costo = costo_localizar;
 
     if (*exito == 1 && CompararNuplas(posicion->e, elector_baja) == 1) {
         if (anterior == NULL) {
@@ -645,6 +652,15 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
     InicializarMetricas(&statsRAC->evocar_exito);
     InicializarMetricas(&statsRAC->evocar_fracaso);
 
+
+    InicializarMetricas(&statsRS->alta_exito);
+    InicializarMetricas(&statsRAL->alta_exito);
+    InicializarMetricas(&statsRAC->alta_exito);
+
+    InicializarMetricas(&statsRS->baja_exito);
+    InicializarMetricas(&statsRAL->baja_exito);
+    InicializarMetricas(&statsRAC->baja_exito);
+
     if (archivo == NULL) {
         return 0;
     }
@@ -676,24 +692,33 @@ int memorizarDesdeArchivo(RS *rs, RAL *ral, RAC *rac, Estadisticas *statsRS, Est
             eTemp.estado = 1;
 
             if(codigoOp == 1){
-                // 1. ALTA RS
-                AltaRS(rs, eTemp, &exitoRS);
+                float costo_op;
+
+                AltaRS(rs, eTemp, &exitoRS, &costo_op);
+                if (exitoRS == 1) RegistrarCosto(&statsRS->alta_exito, costo_op);
 
                 // 2. ALTA RAL
-                AltaRAL(ral, eTemp, &exitoRAL);
+                AltaRAL(ral, eTemp, &exitoRAL, &costo_op);
+                if (exitoRAL == 1) RegistrarCosto(&statsRAL->alta_exito, costo_op);
 
                 // 3. ALTA RAC
-                AltaRAC(rac, eTemp, &exitoRAC);
+                AltaRAC(rac, eTemp, &exitoRAC, &costo_op);
+                if (exitoRAC == 1) RegistrarCosto(&statsRAC->alta_exito, costo_op);
 
             } else {
+               float costo_op;
+
                 // 1. BAJA RS
-                BajaRS(rs, eTemp, &exitoRS);
+                BajaRS(rs, eTemp, &exitoRS, &costo_op);
+                if (exitoRS == 1) RegistrarCosto(&statsRS->baja_exito, costo_op);
 
                 // 2. BAJA RAL
-                BajaRAL(ral, eTemp, &exitoRAL);
+                BajaRAL(ral, eTemp, &exitoRAL, &costo_op);
+                if (exitoRAL == 1) RegistrarCosto(&statsRAL->baja_exito, costo_op);
 
                 // 3. BAJA RAC
-                BajaRAC(rac, eTemp, &exitoRAC);
+                BajaRAC(rac, eTemp, &exitoRAC, &costo_op);
+                if (exitoRAC == 1) RegistrarCosto(&statsRAC->baja_exito, costo_op);
             }
 
         } else if(codigoOp == 3){ // Evocación
@@ -778,33 +803,58 @@ int main() {
                     printf("Procesamiento exitoso.\n");
 
                     printf("\n-----------------------------|--------------|--------------|--------------|\n");
+                    printf("                             |      RAL     |      RAC     |      RS      |\n");
+                    printf("-----------------------------|--------------|--------------|--------------|\n");
+
+                    // --- ALTA EXITOSA ---
+                    printf("Alta exitosa                 |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n",
+                        statsRAL.alta_exito.cantidad, statsRAC.alta_exito.cantidad, statsRS.alta_exito.cantidad);
+                    printf("-----------------------------|--------------|--------------|--------------|\n");
+
+                    // --- BAJA EXITOSA ---
+                    printf("Baja exitosa                 |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n",
+                        statsRAL.baja_exito.cantidad, statsRAC.baja_exito.cantidad, statsRS.baja_exito.cantidad);
+                    printf("-----------------------------|--------------|--------------|--------------|\n");
+
+                    // --- EVOCAR EXITOSO ---
+                    printf("Evocar exitoso               |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n",
+                        statsRAL.evocar_exito.cantidad, statsRAC.evocar_exito.cantidad, statsRS.evocar_exito.cantidad);
+                    printf("  Costo Acumulado            | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_exito.costo_acu, statsRAC.evocar_exito.costo_acu, statsRS.evocar_exito.costo_acu);
+                    printf("  Costo Maximo               | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_exito.costo_max, statsRAC.evocar_exito.costo_max, statsRS.evocar_exito.costo_max);
+                    printf("  Costo Promedio             | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_exito.cantidad > 0 ? statsRAL.evocar_exito.costo_acu / statsRAL.evocar_exito.cantidad : 0,
+                        statsRAC.evocar_exito.cantidad > 0 ? statsRAC.evocar_exito.costo_acu / statsRAC.evocar_exito.cantidad : 0,
+                        statsRS.evocar_exito.cantidad > 0 ? statsRS.evocar_exito.costo_acu / statsRS.evocar_exito.cantidad : 0);
+                    printf("-----------------------------|--------------|--------------|--------------|\n");
+
+                    // --- EVOCAR FRACASO ---
+                    printf("Evocar fracaso               |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n",
+                        statsRAL.evocar_fracaso.cantidad, statsRAC.evocar_fracaso.cantidad, statsRS.evocar_fracaso.cantidad);
+                    printf("  Costo Acumulado            | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_fracaso.costo_acu, statsRAC.evocar_fracaso.costo_acu, statsRS.evocar_fracaso.costo_acu);
+                    printf("  Costo Maximo               | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_fracaso.costo_max, statsRAC.evocar_fracaso.costo_max, statsRS.evocar_fracaso.costo_max);
+                    printf("  Costo Promedio             | %12.3f | %12.3f | %12.3f |\n",
+                        statsRAL.evocar_fracaso.cantidad > 0 ? statsRAL.evocar_fracaso.costo_acu / statsRAL.evocar_fracaso.cantidad : 0,
+                        statsRAC.evocar_fracaso.cantidad > 0 ? statsRAC.evocar_fracaso.costo_acu / statsRAC.evocar_fracaso.cantidad : 0,
+                        statsRS.evocar_fracaso.cantidad > 0 ? statsRS.evocar_fracaso.costo_acu / statsRS.evocar_fracaso.cantidad : 0);
+                    printf("-----------------------------|--------------|--------------|--------------|\n");
+                    /*
+                    printf("\n-----------------------------|--------------|--------------|--------------|\n");
                     printf("                             |      RS      |      RAL     |      RAC     |\n");
                     printf("-----------------------------|--------------|--------------|--------------|\n");
-
-                    /*
-                    // --- ALTA ---
-                    printf("Alta                         |              |              |              |\n");
-                    printf("  Cantidad                   | %12d | %12d | %12d |\n", statsRS.alta.cantidad, statsRAL.alta.cantidad, statsRAC.alta.cantidad);
-                    printf("  Costo Acumulado            | %12.3f | %12.3f | %12.3f |\n", statsRS.alta.costo_acu, statsRAL.alta.costo_acu, statsRAC.alta.costo_acu);
-                    printf("  Costo Maximo               | %12.3f | %12.3f | %12.3f |\n", statsRS.alta.costo_max, statsRAL.alta.costo_max, statsRAC.alta.costo_max);
-                    printf("  Costo Promedio             | %12.3f | %12.3f | %12.3f |\n",
-                        statsRS.alta.cantidad > 0 ? statsRS.alta.costo_acu / statsRS.alta.cantidad : 0,
-                        statsRAL.alta.cantidad > 0 ? statsRAL.alta.costo_acu / statsRAL.alta.cantidad : 0,
-                        statsRAC.alta.cantidad > 0 ? statsRAC.alta.costo_acu / statsRAC.alta.cantidad : 0);
+                    printf("Alta exitosa                 |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n", statsRS.alta_exito.cantidad, statsRAL.alta_exito.cantidad, statsRAC.alta_exito.cantidad);
                     printf("-----------------------------|--------------|--------------|--------------|\n");
-
-                    // --- BAJA ---
-                    printf("Baja                         |              |              |              |\n");
-                    printf("  Cantidad                   | %12d | %12d | %12d |\n", statsRS.baja.cantidad, statsRAL.baja.cantidad, statsRAC.baja.cantidad);
-                    printf("  Costo Acumulado            | %12.3f | %12.3f | %12.3f |\n", statsRS.baja.costo_acu, statsRAL.baja.costo_acu, statsRAC.baja.costo_acu);
-                    printf("  Costo Maximo               | %12.3f | %12.3f | %12.3f |\n", statsRS.baja.costo_max, statsRAL.baja.costo_max, statsRAC.baja.costo_max);
-                    printf("  Costo Promedio             | %12.3f | %12.3f | %12.3f |\n",
-                        statsRS.baja.cantidad > 0 ? statsRS.baja.costo_acu / statsRS.baja.cantidad : 0,
-                        statsRAL.baja.cantidad > 0 ? statsRAL.baja.costo_acu / statsRAL.baja.cantidad : 0,
-                        statsRAC.baja.cantidad > 0 ? statsRAC.baja.costo_acu / statsRAC.baja.cantidad : 0);
+                    printf("Baja exitosa                 |              |              |              |\n");
+                    printf("  Cantidad                   | %12d | %12d | %12d |\n", statsRS.baja_exito.cantidad, statsRAL.baja_exito.cantidad, statsRAC.baja_exito.cantidad);
                     printf("-----------------------------|--------------|--------------|--------------|\n");
-                    */
-
                     // --- EVOCAR EXITOSO ---
                     printf("Evocar exitoso               |              |              |              |\n");
                     printf("  Cantidad                   | %12d | %12d | %12d |\n", statsRS.evocar_exito.cantidad, statsRAL.evocar_exito.cantidad, statsRAC.evocar_exito.cantidad);
@@ -826,7 +876,7 @@ int main() {
                         statsRAL.evocar_fracaso.cantidad > 0 ? statsRAL.evocar_fracaso.costo_acu / statsRAL.evocar_fracaso.cantidad : 0,
                         statsRAC.evocar_fracaso.cantidad > 0 ? statsRAC.evocar_fracaso.costo_acu / statsRAC.evocar_fracaso.cantidad : 0);
                     printf("-----------------------------|--------------|--------------|--------------|\n");
-
+                    */
                     int c;
                     while ((c = getchar()) != '\n' && c != EOF);
                     getchar();
